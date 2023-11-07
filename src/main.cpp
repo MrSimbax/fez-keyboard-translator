@@ -16,7 +16,6 @@
 #include <array>
 #include <cmath>
 #include <cstring>
-#include <format>
 #include <iostream>
 #include <span>
 #include <string_view>
