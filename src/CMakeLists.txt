@@ -6,9 +6,9 @@ if(EMSCRIPTEN)
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
 
-add_executable(main
+add_executable("${CMAKE_PROJECT_NAME}"
     "main.cpp")
-target_link_libraries(main PRIVATE raylib raygui)
-target_include_directories(main PRIVATE ${PROJECT_INCLUDE_DIRECTORIES})
-target_compile_options(main PRIVATE "-Wall;-Wextra;-Wpedantic")
-install(TARGETS main RUNTIME)
+target_link_libraries("${CMAKE_PROJECT_NAME}" PRIVATE raylib raygui)
+target_include_directories("${CMAKE_PROJECT_NAME}" PRIVATE ${PROJECT_INCLUDE_DIRECTORIES})
+target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE "-Wall;-Wextra;-Wpedantic")
+install(TARGETS "${CMAKE_PROJECT_NAME}" RUNTIME)

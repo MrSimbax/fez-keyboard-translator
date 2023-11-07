@@ -30,5 +30,5 @@ You need C++20 compiler, `cmake`, and `git`.
 5. Run.
 
     ```sh
-    ./build/src/main
+    ./build/src/fez-keyboard-translator
     ```
