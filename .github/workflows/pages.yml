@@ -1,0 +1,80 @@
+name: Deploy to GitHub pages
+
+on:
+  push:
+    branches: ["main", "gh-actions"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_NAME: ${{ github.event.repository.name }}
+      PROJECT_BUILD_PATH: build-web
+      PROJECT_INSTALL_PATH: _site
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v11
+        with:
+          version: 3.1.48
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Prepare Environment
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev
+          mkdir -p ${{ env.PROJECT_INSTALL_PATH }}
+        shell: bash
+
+      - name: Configure
+        run: |
+          emcmake cmake -S . -B ${{ env.PROJECT_BUILD_PATH }} -DPLATFORM=Web -DCMAKE_BUILD_TYPE=Release
+        shell: bash
+
+      - name: Build
+        run: |
+          cmake --build ${{ env.PROJECT_BUILD_PATH }}
+        shell: bash
+
+      - name: Generate Artifacts
+        run: |
+          ls -l ${{ env.PROJECT_BUILD_PATH }}/src
+          cp ${{ env.PROJECT_BUILD_PATH }}/src/${{ env.PROJECT_NAME }}.html ${{ env.PROJECT_INSTALL_PATH }}/index.html
+          cp ${{ env.PROJECT_BUILD_PATH }}/src/${{ env.PROJECT_NAME }}.js ${{ env.PROJECT_INSTALL_PATH }}/
+          cp ${{ env.PROJECT_BUILD_PATH }}/src/${{ env.PROJECT_NAME }}.wasm ${{ env.PROJECT_INSTALL_PATH }}/
+          ls -l ${{ env.PROJECT_INSTALL_PATH }}
+          tar -czvf github-pages.tar.gz ${{ env.PROJECT_INSTALL_PATH }}/
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
