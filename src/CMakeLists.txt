@@ -10,9 +10,15 @@ add_executable("${CMAKE_PROJECT_NAME}"
     "main.cpp")
 target_link_libraries("${CMAKE_PROJECT_NAME}" PRIVATE raylib raygui)
 target_include_directories("${CMAKE_PROJECT_NAME}" PRIVATE ${PROJECT_INCLUDE_DIRECTORIES})
+
 if(MSVC)
-    target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE "/SUBSYSTEM:WINDOWS;/ENTRY:mainCRTStartup")
+    target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
 else()
-    target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE "-Wall;-Wextra;-Wpedantic")
+    target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+if(EMSCRIPTEN)
+    target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE --shell-file "${CMAKE_CURRENT_LIST_DIR}/shell_minimal.html")
+endif()
+
 install(TARGETS "${CMAKE_PROJECT_NAME}" RUNTIME)

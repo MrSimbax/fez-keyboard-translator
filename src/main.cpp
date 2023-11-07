@@ -23,10 +23,8 @@
 
 namespace
 {
-/*
-I have decided to overcomplicate things and calculate all the UI parameters at compile-time.
-Why? Well... I was so preoccupied with whether or not I could, that I didn't stop to think whether I should.
-*/
+// I have decided to overcomplicate things and calculate all the UI parameters at compile-time.
+// Why? Well... I was so preoccupied with whether or not I could, that I didn't stop to think whether I should.
 
 template <typename Key, typename Value, std::size_t Size>
 struct ConstexprMap
@@ -528,14 +526,35 @@ auto getDpiScale() -> Vector2
 #endif
 }
 
+auto getScreenScale() -> Vector2
+{
+    // Scale the content to window size while maintaining the aspect ratio
+    auto scaleX = static_cast<float>(GetScreenWidth()) / static_cast<float>(SCREEN_WIDTH);
+    auto scaleY = static_cast<float>(GetScreenHeight()) / static_cast<float>(SCREEN_HEIGHT);
+    auto scale = std::min(scaleX, scaleY);
+    return {.x = scale, .y = scale};
+}
+
+auto getScreenOffset(Vector2 scale) -> Vector2
+{
+    // Move screen from (0,0) to (x,y) so that the content is in the center of the window
+    auto renderWidth = std::floor(SCREEN_WIDTH * scale.x);
+    auto renderHeight = std::floor(SCREEN_HEIGHT * scale.y);
+    return {
+        .x = (static_cast<float>(GetScreenWidth()) - renderWidth) / 2.0f,
+        .y = (static_cast<float>(GetScreenHeight()) - renderHeight) / 2.0f};
+}
+
 auto updateAndDrawFrame() -> void
 {
     static UiState uiState{};
     static RenderTexture2D target = getRenderTexture();
 
-    auto dpiScale = getDpiScale();
-    SetMouseScale(1.0f / dpiScale.x, 1.0f / dpiScale.y);
-    SetWindowSize(std::floor(SCREEN_WIDTH * dpiScale.x), std::floor(SCREEN_HEIGHT * dpiScale.y));
+    auto scale = getScreenScale();
+    auto offset = getScreenOffset(scale);
+
+    SetMouseScale(1.0f / scale.x, 1.0f / scale.y);
+    SetMouseOffset(std::floor(-offset.x), std::floor(-offset.y));
 
     BeginTextureMode(target);
     drawUi(uiState);
@@ -546,7 +565,7 @@ auto updateAndDrawFrame() -> void
 
     constexpr Rectangle source{.x = 0.0f, .y = 0.0f, .width = SCREEN_WIDTH, .height = -SCREEN_HEIGHT};
     Rectangle destination{
-        .x = 0.0f, .y = 0.0f, .width = SCREEN_WIDTH * dpiScale.x, .height = SCREEN_HEIGHT * dpiScale.y};
+        .x = offset.x, .y = offset.y, .width = SCREEN_WIDTH * scale.x, .height = SCREEN_HEIGHT * scale.y};
     constexpr Vector2 origin{.x = 0.0f, .y = 0.0f};
     constexpr float rotation{0.0f};
     constexpr Color tint{WHITE};
@@ -559,7 +578,11 @@ auto updateAndDrawFrame() -> void
 auto main() -> int
 {
     GuiEnableTooltip();
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "FEZ Keyboard Translator");
+
+    auto dpi = getDpiScale();
+    SetWindowMinSize(std::floor(SCREEN_WIDTH * dpi.x), std::floor(SCREEN_HEIGHT * dpi.y));
 
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(updateAndDrawFrame, 0, 1);
