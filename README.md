@@ -4,7 +4,11 @@ Simple tool with virtual keyboard to translate FEZ language.
 
 ![screenshot](screenshot.png)
 
-## Building
+## Download
+
+The app can be used from web browser [here](https://mrsimbax.github.io/fez-keyboard-translator/). Windows and Linux binaries can be downloaded from the [releases page](https://github.com/MrSimbax/fez-keyboard-translator/releases).
+
+## Build
 
 You need C++20 compiler, `cmake`, and `git`.
 
@@ -18,7 +22,7 @@ You need C++20 compiler, `cmake`, and `git`.
 3. Configure `cmake` project inside the repo root.
 
     ```sh
-    cmake -B build -DUSE_WAYLAND=1 -DCMAKE_BUILD_TYPE=Debug
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug
     ```
 
 4. Build.
