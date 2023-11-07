@@ -8,6 +8,10 @@
 #include <raygui.h>
 #include <raylib.h>
 
+#if defined(PLATFORM_WEB)
+#include <emscripten/emscripten.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -508,44 +512,66 @@ auto drawUi(UiState& state) -> void
     drawKeyboard(state);
     drawTextBox(state);
 }
+
+auto getRenderTexture() -> RenderTexture2D
+{
+    RenderTexture2D target = LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetTextureFilter(target.texture, TEXTURE_FILTER_POINT);
+    return target;
+}
+
+auto getDpiScale() -> Vector2
+{
+#if defined(PLATFORM_WEB)
+    return {.x = 1.0f, .y = 1.0f};
+#else
+    return GetWindowScaleDPI();
+#endif
+}
+
+auto updateAndDrawFrame() -> void
+{
+    static UiState uiState{};
+    static RenderTexture2D target = getRenderTexture();
+
+    auto dpiScale = getDpiScale();
+    SetMouseScale(1.0f / dpiScale.x, 1.0f / dpiScale.y);
+    SetWindowSize(std::floor(SCREEN_WIDTH * dpiScale.x), std::floor(SCREEN_HEIGHT * dpiScale.y));
+
+    BeginTextureMode(target);
+    drawUi(uiState);
+    EndTextureMode();
+
+    BeginDrawing();
+    ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+
+    constexpr Rectangle source{.x = 0.0f, .y = 0.0f, .width = SCREEN_WIDTH, .height = -SCREEN_HEIGHT};
+    Rectangle destination{
+        .x = 0.0f, .y = 0.0f, .width = SCREEN_WIDTH * dpiScale.x, .height = SCREEN_HEIGHT * dpiScale.y};
+    constexpr Vector2 origin{.x = 0.0f, .y = 0.0f};
+    constexpr float rotation{0.0f};
+    constexpr Color tint{WHITE};
+    DrawTexturePro(target.texture, source, destination, origin, rotation, tint);
+
+    EndDrawing();
+}
 } // namespace
 
 auto main() -> int
 {
     GuiEnableTooltip();
-
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "FEZ Keyboard Translator");
 
+#if defined(PLATFORM_WEB)
+    emscripten_set_main_loop(updateAndDrawFrame, 0, 1);
+#else
     SetTargetFPS(60);
-
-    UiState uiState{};
-
-    RenderTexture2D target = LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetTextureFilter(target.texture, TEXTURE_FILTER_POINT);
 
     while (not WindowShouldClose())
     {
-        auto dpiScale = GetWindowScaleDPI();
-        SetMouseScale(1.0f / dpiScale.x, 1.0f / dpiScale.y);
-        SetWindowSize(std::floor(SCREEN_WIDTH * dpiScale.x), std::floor(SCREEN_HEIGHT * dpiScale.y));
-
-        BeginTextureMode(target);
-        drawUi(uiState);
-        EndTextureMode();
-
-        BeginDrawing();
-        ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-
-        constexpr Rectangle source{.x = 0.0f, .y = 0.0f, .width = SCREEN_WIDTH, .height = -SCREEN_HEIGHT};
-        Rectangle destination{
-            .x = 0.0f, .y = 0.0f, .width = SCREEN_WIDTH * dpiScale.x, .height = SCREEN_HEIGHT * dpiScale.y};
-        constexpr Vector2 origin{.x = 0.0f, .y = 0.0f};
-        constexpr float rotation{0.0f};
-        constexpr Color tint{WHITE};
-        DrawTexturePro(target.texture, source, destination, origin, rotation, tint);
-
-        EndDrawing();
+        updateAndDrawFrame();
     }
+#endif
 
     CloseWindow();
 
