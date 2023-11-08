@@ -2,19 +2,26 @@ name: Build
 
 on: [push, workflow_dispatch]
 
+env:
+  PROJECT_NAME: ${{ github.event.repository.name }}
+  PROJECT_RELEASE_NAME: FEZ Keyboard Translator
+  PROJECT_RELEASE_PATH_LINUX: ${{ github.event.repository.name }}-linux-x64
+  PROJECT_RELEASE_PATH_WEB: ${{ github.event.repository.name }}-web
+  PROJECT_RELEASE_PATH_WINDOWS: ${{ github.event.repository.name }}-windows-x64
+
 jobs:
   build-linux:
     runs-on: ubuntu-latest
 
     env:
-      PROJECT_NAME: ${{ github.event.repository.name }}
       PROJECT_BUILD_PATH: build
-      PROJECT_INSTALL_PATH: ${{ github.event.repository.name }}-linux-x64
-
-    permissions:
-      contents: write
 
     steps:
+      - name: Set env variables
+        run: |
+          echo "PROJECT_INSTALL_PATH=${{ env.PROJECT_RELEASE_PATH_LINUX }}" >> $GITHUB_ENV
+        shell: bash
+
       - name: Check out repository code
         uses: actions/checkout@v4
         with:
@@ -51,26 +58,21 @@ jobs:
           name: ${{ env.PROJECT_INSTALL_PATH }}.zip
           path: ./${{ env.PROJECT_INSTALL_PATH }}.zip
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: ${{ env.PROJECT_INSTALL_PATH }}.zip
-          generate_release_notes: true
-          draft: true
-
   build-web:
     runs-on: ubuntu-latest
 
     env:
-      PROJECT_NAME: ${{ github.event.repository.name }}
       PROJECT_BUILD_PATH: build-web
-      PROJECT_INSTALL_PATH: ${{ github.event.repository.name }}-web
 
     permissions:
       contents: write
 
     steps:
+      - name: Set env variables
+        run: |
+          echo "PROJECT_INSTALL_PATH=${{ env.PROJECT_RELEASE_PATH_WEB }}" >> $GITHUB_ENV
+        shell: bash
+
       - name: Check out repository code
         uses: actions/checkout@v4
         with:
@@ -115,26 +117,18 @@ jobs:
           name: ${{ env.PROJECT_INSTALL_PATH }}.zip
           path: ./${{ env.PROJECT_INSTALL_PATH }}.zip
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: ${{ env.PROJECT_INSTALL_PATH }}.zip
-          generate_release_notes: true
-          draft: true
-
   build-windows:
     runs-on: windows-latest
 
     env:
-      PROJECT_NAME: ${{ github.event.repository.name }}
-      PROJECT_BUILD_PATH: build
-      PROJECT_INSTALL_PATH: ${{ github.event.repository.name }}-windows-x64
-
-    permissions:
-      contents: write
+      PROJECT_BUILD_PATH: build-win
 
     steps:
+      - name: Set env variables
+        run: |
+          echo "PROJECT_INSTALL_PATH=${{ env.PROJECT_RELEASE_PATH_WINDOWS }}" >> $GITHUB_ENV
+        shell: bash
+
       - name: Check out repository code
         uses: actions/checkout@v4
         with:
@@ -172,10 +166,41 @@ jobs:
           name: ${{ env.PROJECT_INSTALL_PATH }}.zip
           path: ./${{ env.PROJECT_INSTALL_PATH }}.zip
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    needs: [build-linux, build-web, build-windows]
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Download Linux package
+        uses: actions/download-artifact@v2
         with:
-          files: ${{ env.PROJECT_INSTALL_PATH }}.zip
+          name: ${{ env.PROJECT_RELEASE_PATH_LINUX }}.zip
+
+      - name: Download Web package
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ env.PROJECT_RELEASE_PATH_WEB }}.zip
+
+      - name: Download Windows package
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ env.PROJECT_RELEASE_PATH_WINDOWS }}.zip
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ env.PROJECT_RELEASE_NAME }} ${{ github.ref_name }}
+          files: |
+            ${{ env.PROJECT_RELEASE_PATH_LINUX }}.zip
+            ${{ env.PROJECT_RELEASE_PATH_WEB }}.zip
+            ${{ env.PROJECT_RELEASE_PATH_WINDOWS }}.zip
           generate_release_notes: true
-          draft: true
