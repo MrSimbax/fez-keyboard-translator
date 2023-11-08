@@ -1,4 +1,3 @@
-#include <string>
 #define RAYLIB_IMPLEMENTATION
 #define RAYGUI_IMPLEMENTATION
 
@@ -545,6 +544,17 @@ auto getScreenOffset(Vector2 scale) -> Vector2
         .y = (static_cast<float>(GetScreenHeight()) - renderHeight) / 2.0f};
 }
 
+auto convertTouchToMouse() -> void
+{
+    if (not(GetTouchPointCount() > 0))
+    {
+        return;
+    }
+
+    auto touchPosition = GetTouchPosition(0);
+    SetMousePosition(std::floor(touchPosition.x), std::floor(touchPosition.y));
+}
+
 auto updateAndDrawFrame() -> void
 {
     static UiState uiState{};
@@ -555,6 +565,8 @@ auto updateAndDrawFrame() -> void
 
     SetMouseScale(1.0f / scale.x, 1.0f / scale.y);
     SetMouseOffset(std::floor(-offset.x), std::floor(-offset.y));
+
+    convertTouchToMouse();
 
     BeginTextureMode(target);
     drawUi(uiState);
